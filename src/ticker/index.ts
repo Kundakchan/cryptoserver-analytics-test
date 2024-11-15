@@ -1,7 +1,7 @@
 import { market } from "../market";
-import { Ticker } from "./interface";
+import { GetKline, Ticker } from "./interface";
 
-const _data: Ticker[] = [];
+const _data: Partial<Record<string, Ticker[]>> = {};
 
 const _getWSParams = () => {
   try {
@@ -38,8 +38,30 @@ const watch = () => {
   };
 
   ws.onmessage = (event: any) => {
-    const result = JSON.parse(event.data).data;
-    _data.push({ ...result, createdAt: new Date() });
+    const result = JSON.parse(event.data).data as Ticker;
+    if (!result?.symbol) return;
+
+    if (!_data[result.symbol]) {
+      _data[result.symbol] = [{ ...result, createdAt: new Date() }];
+    } else {
+      _data[result.symbol]?.push({ ...result, createdAt: new Date() });
+    }
   };
 };
-export const ticker = { watch };
+
+const getKline: GetKline = ({ symbol, interval }) => {
+  if (!_data[symbol]) return [];
+  return groupByTimeInterval({ data: _data[symbol], intervale: interval });
+};
+
+type GroupedData = {
+  items: Ticker[];
+  oldestTime: string; // Самое старое время в группе
+  newestTime: string; // Самое новое время в группе
+};
+
+export interface GroupByTimeInterval {
+  (params: { data: Ticker[]; intervale: number }): GroupedData[];
+}
+
+export const ticker = { watch, getKline };
