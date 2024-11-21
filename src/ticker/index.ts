@@ -1,5 +1,12 @@
 import { market } from "../market";
-import { GetKline, GroupByTimeInterval, Ticker } from "./interface";
+import {
+  AggregateTickerProperties,
+  AggregateTickerPropertiesResponse,
+  ConvertingToCandles,
+  GetKline,
+  GroupByTimeInterval,
+  Ticker,
+} from "./interface";
 
 const _data: Partial<Record<string, Ticker[]>> = {};
 
@@ -49,9 +56,21 @@ const watch = () => {
   };
 };
 
-const getKline: GetKline = ({ symbol, interval }) => {
+const getKline: GetKline = ({ symbol, interval, type }) => {
   if (!_data[symbol]) return [];
-  return groupByTimeInterval({ data: _data[symbol], interval: interval });
+  const groupBy = groupByTimeInterval({
+    data: _data[symbol],
+    interval: interval,
+  });
+
+  return groupBy.map((item) => ({
+    start: item.start,
+    end: item.end,
+    ...convertingToCandles({
+      tickers: aggregateTickerProperties(item.tickers),
+      field: type,
+    }),
+  }));
 };
 
 const groupByTimeInterval: GroupByTimeInterval = ({ data, interval }) => {
@@ -80,6 +99,59 @@ const groupByTimeInterval: GroupByTimeInterval = ({ data, interval }) => {
       };
     })
     .reverse();
+};
+
+const convertingToCandles: ConvertingToCandles = ({ tickers, field }) => {
+  if (!tickers[field]) {
+    console.error(`Свойство "${field}" не найдено в объекте.`);
+    return {};
+  }
+
+  if (["createdAt", "tickDirection", "symbol"].includes(field)) {
+    throw new Error(`Свойство "${field}" не допускается.`);
+  }
+
+  const values = tickers[field];
+
+  // Проверяем, что массив содержит только строки или числа
+  if (
+    !Array.isArray(values) ||
+    values.some((val) => typeof val !== "string" && typeof val !== "number")
+  ) {
+    throw new Error(
+      `Свойство "${field}" должно содержать массив строк или чисел.`
+    );
+  }
+
+  // Преобразуем строки в числа, если возможно
+  const numericValues = values.map((val) =>
+    typeof val === "string" ? parseFloat(val) : val
+  );
+
+  return {
+    open: numericValues[0],
+    close: numericValues[numericValues.length - 1],
+    high: Math.max(...numericValues),
+    low: Math.min(...numericValues),
+    changes: numericValues.length,
+  };
+};
+
+const aggregateTickerProperties: AggregateTickerProperties = (tickers) => {
+  const result: AggregateTickerPropertiesResponse = {};
+
+  tickers.forEach((ticker) => {
+    Object.entries(ticker).forEach(([key, value]) => {
+      if (!result[key]) {
+        result[key] = [];
+      }
+      if (!result[key].includes(value)) {
+        result[key].push(value);
+      }
+    });
+  });
+
+  return result;
 };
 
 export const ticker = { watch, getKline, groupByTimeInterval };
