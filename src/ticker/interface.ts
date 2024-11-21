@@ -5,6 +5,17 @@ export interface Ticker extends Partial<TickerLinearInverseV5> {
   createdAt: Date;
 }
 
+export interface GetKlineResponse {}
 export interface GetKline {
-  (params: { symbol: string; interval: number }): unknown[];
+  (params: { symbol: string; interval: number }): GetKlineResponse[];
+}
+
+export interface GroupByTimeIntervalData {
+  tickers: Ticker[];
+  start: Date;
+  end: Date;
+}
+
+export interface GroupByTimeInterval {
+  (params: { data: Ticker[]; interval: number }): GroupByTimeIntervalData[];
 }

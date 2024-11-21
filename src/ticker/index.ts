@@ -1,5 +1,5 @@
 import { market } from "../market";
-import { GetKline, Ticker } from "./interface";
+import { GetKline, GroupByTimeInterval, Ticker } from "./interface";
 
 const _data: Partial<Record<string, Ticker[]>> = {};
 
@@ -51,17 +51,35 @@ const watch = () => {
 
 const getKline: GetKline = ({ symbol, interval }) => {
   if (!_data[symbol]) return [];
-  return groupByTimeInterval({ data: _data[symbol], intervale: interval });
+  return groupByTimeInterval({ data: _data[symbol], interval: interval });
 };
 
-type GroupedData = {
-  items: Ticker[];
-  oldestTime: string; // Самое старое время в группе
-  newestTime: string; // Самое новое время в группе
+const groupByTimeInterval: GroupByTimeInterval = ({ data, interval }) => {
+  const dataList = data.reverse();
+  let timeCurrentGroup = new Date(
+    dataList[0].createdAt.getTime() - interval * 1000
+  );
+  const groups: Record<string, Ticker[]> = {
+    [timeCurrentGroup.toLocaleTimeString("ru")]: [],
+  };
+  for (const ticker of dataList) {
+    if (ticker.createdAt >= timeCurrentGroup) {
+      groups[timeCurrentGroup.toLocaleTimeString("ru")].push(ticker);
+    } else {
+      timeCurrentGroup = new Date(ticker.createdAt.getTime() - interval * 1000);
+      groups[timeCurrentGroup.toLocaleTimeString("ru")] = [ticker];
+    }
+  }
+  return Object.values(groups)
+    .map((group) => {
+      const tickers = group.reverse();
+      return {
+        tickers,
+        start: tickers[0].createdAt,
+        end: tickers[tickers.length - 1].createdAt,
+      };
+    })
+    .reverse();
 };
 
-export interface GroupByTimeInterval {
-  (params: { data: Ticker[]; intervale: number }): GroupedData[];
-}
-
-export const ticker = { watch, getKline };
+export const ticker = { watch, getKline, groupByTimeInterval };

@@ -1,7 +1,8 @@
 import { ticker } from "../ticker";
 
 const run = async () => {
-  console.log(ticker.getKline({ symbol: "BTCUSDT", interval: 1 }));
+  const data = ticker.getKline({ symbol: "BTCUSDT", interval: 1 });
+  console.log(data[0]);
 };
 
 export const analytics = { run };
