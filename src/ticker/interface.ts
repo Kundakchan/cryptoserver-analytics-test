@@ -5,9 +5,16 @@ export interface Ticker extends Partial<TickerLinearInverseV5> {
   createdAt: Date;
 }
 
-export interface GetKlineResponse {}
+export interface GetKlineResponse extends ConvertingToCandlesResponse {
+  start: Date;
+  end: Date;
+}
 export interface GetKline {
-  (params: { symbol: string; interval: number }): GetKlineResponse[];
+  (params: {
+    symbol: string;
+    interval: number;
+    type: ConvertingToCandlesParams["field"];
+  }): GetKlineResponse[];
 }
 
 export interface GroupByTimeIntervalData {
@@ -18,4 +25,30 @@ export interface GroupByTimeIntervalData {
 
 export interface GroupByTimeInterval {
   (params: { data: Ticker[]; interval: number }): GroupByTimeIntervalData[];
+}
+
+export interface AggregateTickerPropertiesResponse
+  extends Partial<Record<keyof Ticker, string[]>> {}
+export interface AggregateTickerProperties {
+  (tickers: Ticker[]): AggregateTickerPropertiesResponse;
+}
+
+export interface ConvertingToCandlesResponse {
+  open?: number;
+  close?: number;
+  high?: number;
+  low?: number;
+  changes?: number;
+}
+
+export interface ConvertingToCandlesParams {
+  tickers: AggregateTickerPropertiesResponse;
+  field: Exclude<
+    keyof AggregateTickerPropertiesResponse,
+    "createdAt" | "tickDirection" | "symbol"
+  >;
+}
+
+export interface ConvertingToCandles {
+  (params: ConvertingToCandlesParams): ConvertingToCandlesResponse;
 }
