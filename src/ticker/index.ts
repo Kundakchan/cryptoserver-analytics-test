@@ -9,6 +9,9 @@ import {
 } from "./interface";
 
 const _data: Partial<Record<string, Ticker[]>> = {};
+let reconnectAttempts = 0;
+const maxReconnectAttempts = 5;
+const reconnectInterval = 5000; // в миллисекундах
 
 const _getWSParams = () => {
   try {
@@ -29,29 +32,47 @@ const watch = () => {
       `Некорректный адрес веб-сокета: ${process.env.API_PUBLIC_WEBSOCKET}`
     );
   }
+
   const ws = new WebSocket(process.env.API_PUBLIC_WEBSOCKET);
 
   ws.onopen = () => {
     console.warn("Соединение ws tickers открыто!");
     ws.send(_getWSParams());
+    reconnectAttempts = 0; // Сбрасываем счетчик попыток
   };
 
   ws.onclose = () => {
-    throw new Error(`Соединение ws tickers закрыто!`);
+    console.error("Соединение ws tickers закрыто!");
+    if (reconnectAttempts < maxReconnectAttempts) {
+      reconnectAttempts++;
+      console.log(
+        `Попытка переподключения (${reconnectAttempts}/${maxReconnectAttempts})...`
+      );
+      setTimeout(() => {
+        watch(); // Повторяем подключение
+      }, reconnectInterval);
+    } else {
+      console.error("Превышено количество попыток переподключения.");
+    }
   };
 
   ws.onerror = (error: any) => {
-    throw new Error(`Ошибка Соединение ws tickers ${error}`);
+    console.error(`Ошибка соединения ws tickers: ${error.message}`);
+    ws.close(); // Закрываем соединение для безопасного повторного подключения
   };
 
   ws.onmessage = (event: any) => {
-    const result = JSON.parse(event.data).data as Ticker;
-    if (!result?.symbol) return;
+    try {
+      const result = JSON.parse(event.data).data as Ticker;
+      if (!result?.symbol) return;
 
-    if (!_data[result.symbol]) {
-      _data[result.symbol] = [{ ...result, createdAt: new Date() }];
-    } else {
-      _data[result.symbol]?.push({ ...result, createdAt: new Date() });
+      if (!_data[result.symbol]) {
+        _data[result.symbol] = [{ ...result, createdAt: new Date() }];
+      } else {
+        _data[result.symbol]?.push({ ...result, createdAt: new Date() });
+      }
+    } catch (error) {
+      console.error("Ошибка обработки сообщения:", error);
     }
   };
 };

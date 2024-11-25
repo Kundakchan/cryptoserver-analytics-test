@@ -11,7 +11,7 @@ const _getWSParams = () => {
       .map((symbol) => `orderbook.1.${symbol}`);
     const subscribe = {
       op: "subscribe",
-      args: ["orderbook.500.BTCUSDT"],
+      args: ["orderbook.500.TROYUSDT"],
     };
     return JSON.stringify(subscribe);
   } catch (error) {
@@ -43,8 +43,8 @@ const watch = () => {
   ws.onmessage = (event: any) => {
     const result = JSON.parse(event.data).data as Orderbook;
     console.log({
-      b: result?.b?.length,
-      a: result?.a?.length,
+      b: result?.b,
+      a: result?.a,
     });
     _data.push({ ...result, createdAt: new Date() });
   };

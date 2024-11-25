@@ -6,7 +6,7 @@ const run = async () => {
     interval: 1,
     type: "lastPrice",
   });
-  console.log(data[0]);
+  console.log(data.length);
 };
 
 export const analytics = { run };
