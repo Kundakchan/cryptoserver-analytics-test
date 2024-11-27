@@ -3,15 +3,17 @@ import { market } from "./market";
 import { orderbook } from "./orderbook";
 import { ticker } from "./ticker";
 
-const SETTINGS = {} as const;
+export const SETTINGS = {
+  symbol: "OGUSDT",
+} as const;
 
 const app = async () => {
   await market.fetchCoins();
   ticker.watch();
   orderbook.watch();
-  // setInterval(() => {
-  //   analytics.run();
-  // }, 5 * 1000);
+  setInterval(() => {
+    analytics.run();
+  }, 1 * 1000);
 };
 
 app();
